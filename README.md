@@ -40,6 +40,6 @@
 
 ![Image text](https://github.com/pengchen1019/img/blob/main/9.png)
 
-##数据分析
+## 数据分析
 - 训练集中不存在空值；
 - 真人/机器人占比约为50%；
