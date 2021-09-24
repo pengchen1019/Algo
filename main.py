@@ -4,6 +4,9 @@ import matplotlib as mlt
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn import linear_model
 
 plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
@@ -64,8 +67,32 @@ for data in dataset:
     data['phase'] = data['phase'].map(phases)
     data['result'] = data['result'].map(results)
 
-data_corr = train_captcha.corr()
-plt.subplots(figsize=(9, 9), dpi=100, facecolor='w')
-fig = sns.heatmap(data_corr, annot=True, vmax=1, square=True, cmap="Blues", fmt='.2g')
-fig.set_title('Train_captcha相关性热力图')
-plt.show()
+#相关性热力图绘制
+# data_corr = train_captcha.corr()
+# plt.subplots(figsize=(9, 9), dpi=100, facecolor='w')
+# fig = sns.heatmap(data_corr, annot=True, vmax=1, square=True, cmap="Blues", fmt='.2g')
+# fig.set_title('Train_captcha相关性热力图')
+# plt.show()
+
+#总平均请求次数
+# merge = (valid_actions['pv'].groupby(valid_actions['user_id']).sum()) / \
+#         (valid_actions['pv'].groupby(valid_actions['user_id']).count())
+# merge.to_csv('./mergey.csv')
+
+merge = pd.read_csv('./merge.csv')
+mergey = pd.read_csv('./mergey.csv')
+df = pd.concat([merge,train_ground['label']],axis=1)
+
+features = ['pv']
+X_train = df.loc[:, features].values
+Y_train = df.loc[:, ['label']].values
+X_test = mergey
+x = StandardScaler().fit_transform(X_train)
+
+# 随机梯度下降
+sgd = linear_model.SGDClassifier(max_iter=5, tol=None)
+sgd.fit(X_train, Y_train)
+Y_pred = sgd.predict(X_test)
+
+sgd.score(X_train, Y_train)
+acc_sgd = round(sgd.score(X_train, Y_train) * 100, 2)
