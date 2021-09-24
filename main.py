@@ -3,6 +3,10 @@ import numpy as np
 import matplotlib as mlt
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
+import seaborn as sns
+
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
 
 train_path = './data/train/'
 valid_path = './data/validation/'
@@ -25,7 +29,7 @@ Action_info(17565166 + 2478280):
 Captcha_info(304827 + 39836):
     user_id:用户id
     captcha_id:验证码id
-    phase:验证阶段(new:验证生成   verify:用户验证)
+    phase:验证阶段(new:验证生成   verify:用户验证 filter：被前端豁免过滤，比如该用户刚刚通过了其他验证码的测试 view:验证码弹出展示)
     result:验证阶段结果(success   fail   error)
     verify_time:验证时间（毫秒）
     server_time:服务端回收验证码结果的时间戳(秒)
@@ -50,12 +54,18 @@ validation_set(10797):
 
 # 特征形式转换
 '''
-Captcha_info中，new：0 verify：1
-                success：1 fail:0 error:-1
+Captcha_info中，new：0 verify：1   filter:2   view:3
+                success：1 fail:2 error:0
 '''
-phases = {'new': 0, 'verify': 1}
-results = {'success': 1, 'fail': 0, 'error': -1}
+phases = {'new': 0, 'verify': 1, 'filter': 2, 'view': 3}
+results = {'success': 1, 'fail': 2, 'error': 0}
 dataset = [train_captcha, valid_captcha]
 for data in dataset:
     data['phase'] = data['phase'].map(phases)
     data['result'] = data['result'].map(results)
+
+data_corr = train_captcha.corr()
+plt.subplots(figsize=(9, 9), dpi=100, facecolor='w')
+fig = sns.heatmap(data_corr, annot=True, vmax=1, square=True, cmap="Blues", fmt='.2g')
+fig.set_title('Train_captcha相关性热力图')
+plt.show()
