@@ -3,43 +3,50 @@
 ### Train_action_info:
 - Info:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/1.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/1.png)
 
 - Describe:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/2.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/2.png)
 
 - Head
 
-![Image text](https://github.com/pengchen1019/img/blob/main/3.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/3.png)
 
 ### Train_captcha_info:
 - Info:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/4.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/4.png)
 
 - Describe:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/5.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/5.png)
 
 - Head:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/6.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/6.png)
 
 ### Ground_truth:
 
 - Info:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/7.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/7.png)
 
 - Describe:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/8.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/8.png)
 
 - Head:
 
-![Image text](https://github.com/pengchen1019/img/blob/main/9.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/9.png)
 
 ## 数据分析
 - 训练集中不存在空值；
 - 真人/机器人占比约为50%；
+
+### 两个文件的相关性分析
+相关性热力图如下：
+
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/Train_action%20corr.png)
+
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/Train_captcha%20corr.png)
