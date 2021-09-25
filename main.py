@@ -4,9 +4,16 @@ import matplotlib as mlt
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 import seaborn as sns
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
 from sklearn import linear_model
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import Perceptron
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC, LinearSVC
+from sklearn.naive_bayes import GaussianNB
 
 plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
@@ -86,13 +93,90 @@ df = pd.concat([merge,train_ground['label']],axis=1)
 features = ['pv']
 X_train = df.loc[:, features].values
 Y_train = df.loc[:, ['label']].values
-X_test = mergey
+X_test = mergey.loc[:, features].values
 x = StandardScaler().fit_transform(X_train)
 
-# 随机梯度下降
-sgd = linear_model.SGDClassifier(max_iter=5, tol=None)
-sgd.fit(X_train, Y_train)
-Y_pred = sgd.predict(X_test)
 
-sgd.score(X_train, Y_train)
-acc_sgd = round(sgd.score(X_train, Y_train) * 100, 2)
+# 随机梯度下降
+# sgd = linear_model.SGDClassifier(max_iter=5, tol=None)
+# sgd.fit(x, Y_train)
+# Y_pred = sgd.predict(X_test)
+# print(Y_pred)
+#
+# sgd.score(x, Y_train)
+# acc_sgd = round(sgd.score(x, Y_train) * 100, 2)
+
+# 随机森林
+random_forest = RandomForestClassifier(n_estimators=100)
+random_forest.fit(x, Y_train)
+
+Y_prediction = random_forest.predict(X_test)
+random_forest.score(x, Y_train)
+acc_random_forest = round(random_forest.score(x, Y_train) * 100, 2)
+
+# from sklearn.model_selection import cross_val_score
+# rf = RandomForestClassifier(n_estimators=100)
+# scores = cross_val_score(rf, x, Y_train, cv=10, scoring="accuracy")
+# print("scores:", scores)
+# print("Mean:", scores.mean())
+# print("Standard Deviation:", scores.std())
+
+# param_grid = {
+#     "criterion" : ["gini", "entropy"],
+#     "min_samples_leaf": [1, 5, 10, 25, 50, 70],
+#     "min_samples_split" : [2, 4, 10, 12, 16, 18, 25, 35],
+#     "n_estimators": [100, 400, 700, 1000, 1500]
+# }
+# from sklearn.model_selection import GridSearchCV, cross_val_score
+# rf = RandomForestClassifier(n_estimators=100, max_features='auto',
+#                             oob_score=True, random_state=1, n_jobs=-1)
+# clf = GridSearchCV(estimator=rf, param_grid=param_grid, n_jobs=-1)
+# clf.fit(x, Y_train)
+# print(clf.bestparams)
+
+
+# # k-近邻算法
+# knn = KNeighborsClassifier(n_neighbors=3)
+# knn.fit(x, Y_train)
+#
+# Y_pred = knn.predict(X_test)
+# acc_knn = round(knn.score(x, Y_train) * 100, 2)
+
+# results = pd.DataFrame({
+#     'Model': [ 'KNN','Random Forest',
+#               'Stochastic Gradient Decent'],
+#     'Score': [acc_knn,acc_random_forest,
+#                acc_sgd]
+# })
+# result_df = results.sort_values(by='Score', ascending=False)
+# result_df = result_df.set_index('Score')
+# print(result_df.head(9))
+
+
+random_forest = RandomForestClassifier(criterion="gini",
+                                       min_samples_leaf=5,
+                                       min_samples_split=2,
+                                       n_estimators=400,
+                                       max_features='auto',
+                                       oob_score=True,
+                                       random_state=1,
+                                       n_jobs=-1
+                                       )
+random_forest.fit(x, Y_train)
+Y_prediction = random_forest.predict(X_test)
+random_forest.score(x, Y_train)
+# print("oob score:", round(random_forest.oob_score_, 4) * 100, "%")
+#
+# print(Y_prediction)
+# Y_prediction = pd.DataFrame(Y_prediction)
+# result = pd.concat([valid_set['user_id'],Y_prediction],axis=1)
+# result.to_csv('./result.csv')
+# print(result)
+
+
+
+data_corr = df.corr()
+plt.subplots(figsize=(9, 9), dpi=100, facecolor='w')
+fig = sns.heatmap(data_corr, annot=True, vmax=1, square=True, cmap="Blues", fmt='.2g')
+fig.set_title('Train_captcha相关性热力图')
+plt.show()
