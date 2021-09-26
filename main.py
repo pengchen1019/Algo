@@ -14,10 +14,42 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC, LinearSVC
 from sklearn.naive_bayes import GaussianNB
+from sklearn.model_selection import GridSearchCV
 
 plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
 
+#数据压缩
+def reduce_mem_usage(df, verbose=True):
+    numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+    start_mem = df.memory_usage().sum() / 1024**2
+    for col in df.columns:
+        col_type = df[col].dtypes
+        if col_type in numerics:
+            c_min = df[col].min()
+            c_max = df[col].max()
+            if str(col_type)[:3] == 'int':
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df[col] = df[col].astype(np.int8)
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df[col] = df[col].astype(np.int16)
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df[col] = df[col].astype(np.int32)
+                elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
+                    df[col] = df[col].astype(np.int64)
+            else:
+                if c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
+                    df[col] = df[col].astype(np.float16)
+                elif c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df[col] = df[col].astype(np.float32)
+                else:
+                    df[col] = df[col].astype(np.float64)
+    end_mem = df.memory_usage().sum() / 1024**2
+    if verbose: print('Mem. usage decreased to {:5.2f} Mb ({:.1f}% reduction)'.format(end_mem, 100 * (start_mem - end_mem) / start_mem))
+    return df
+
+
+#数据导入
 train_path = './data/train/'
 valid_path = './data/validation/'
 
@@ -82,101 +114,88 @@ for data in dataset:
 # plt.show()
 
 #总平均请求次数
-# merge = (valid_actions['pv'].groupby(valid_actions['user_id']).sum()) / \
+# train_pv = (train_actions['pv'].groupby(train_actions['user_id']).sum()) / \
+#         (train_actions['pv'].groupby(train_actions['user_id']).count())
+# train_pv.to_csv('./train_pv.csv')
+#
+# test_pv = (valid_actions['pv'].groupby(valid_actions['user_id']).sum()) / \
 #         (valid_actions['pv'].groupby(valid_actions['user_id']).count())
-# merge.to_csv('./mergey.csv')
-
-merge = pd.read_csv('./merge.csv')
-mergey = pd.read_csv('./mergey.csv')
-df = pd.concat([merge,train_ground['label']],axis=1)
-
-features = ['pv']
-X_train = df.loc[:, features].values
-Y_train = df.loc[:, ['label']].values
-X_test = mergey.loc[:, features].values
-x = StandardScaler().fit_transform(X_train)
-
-
-# 随机梯度下降
-# sgd = linear_model.SGDClassifier(max_iter=5, tol=None)
-# sgd.fit(x, Y_train)
-# Y_pred = sgd.predict(X_test)
-# print(Y_pred)
+# test_pv.to_csv('./test_pv.csv')
 #
-# sgd.score(x, Y_train)
-# acc_sgd = round(sgd.score(x, Y_train) * 100, 2)
-
-# 随机森林
-random_forest = RandomForestClassifier(n_estimators=100)
-random_forest.fit(x, Y_train)
-
-Y_prediction = random_forest.predict(X_test)
-random_forest.score(x, Y_train)
-acc_random_forest = round(random_forest.score(x, Y_train) * 100, 2)
-
-# from sklearn.model_selection import cross_val_score
-# rf = RandomForestClassifier(n_estimators=100)
-# scores = cross_val_score(rf, x, Y_train, cv=10, scoring="accuracy")
-# print("scores:", scores)
-# print("Mean:", scores.mean())
-# print("Standard Deviation:", scores.std())
-
-# param_grid = {
-#     "criterion" : ["gini", "entropy"],
-#     "min_samples_leaf": [1, 5, 10, 25, 50, 70],
-#     "min_samples_split" : [2, 4, 10, 12, 16, 18, 25, 35],
-#     "n_estimators": [100, 400, 700, 1000, 1500]
-# }
-# from sklearn.model_selection import GridSearchCV, cross_val_score
-# rf = RandomForestClassifier(n_estimators=100, max_features='auto',
-#                             oob_score=True, random_state=1, n_jobs=-1)
-# clf = GridSearchCV(estimator=rf, param_grid=param_grid, n_jobs=-1)
-# clf.fit(x, Y_train)
-# print(clf.bestparams)
-
-
-# # k-近邻算法
-# knn = KNeighborsClassifier(n_neighbors=3)
-# knn.fit(x, Y_train)
+# train_verify = (train_captcha['verify_time'].groupby(train_captcha['user_id']).sum()) / \
+#         (train_captcha['verify_time'].groupby(train_captcha['user_id']).count())
+# train_verify.to_csv('./train_verify.csv')
 #
-# Y_pred = knn.predict(X_test)
-# acc_knn = round(knn.score(x, Y_train) * 100, 2)
+# test_verify = (valid_captcha['verify_time'].groupby(valid_captcha['user_id']).sum()) / \
+#         (valid_captcha['verify_time'].groupby(valid_captcha['user_id']).count())
+# test_verify.to_csv('./test_verify.csv')
 
-# results = pd.DataFrame({
-#     'Model': [ 'KNN','Random Forest',
-#               'Stochastic Gradient Decent'],
-#     'Score': [acc_knn,acc_random_forest,
-#                acc_sgd]
-# })
-# result_df = results.sort_values(by='Score', ascending=False)
-# result_df = result_df.set_index('Score')
-# print(result_df.head(9))
+# train_server= ((train_captcha['server_time'].groupby(train_captcha['user_id']).max()) - (train_captcha['server_time'].groupby(train_captcha['user_id']).min()) )/ \
+#         (train_captcha['server_time'].groupby(train_captcha['user_id']).count())
+# train_server.to_csv('./train_server.csv')
 
+# test_server= ((valid_captcha['server_time'].groupby(valid_captcha['user_id']).max()) - (valid_captcha['server_time'].groupby(valid_captcha['user_id']).min()) )/ \
+#         (valid_captcha['server_time'].groupby(valid_captcha['user_id']).count())
+# test_server.to_csv('./test_server.csv')
 
+train_pv = pd.read_csv('./train_pv.csv')
+train_verify = pd.read_csv('./train_verify.csv')
+train_server = pd.read_csv('./train_server.csv')
+
+test_pv = pd.read_csv('./test_pv.csv')
+test_verify = pd.read_csv('./test_verify.csv')
+test_server = pd.read_csv('./test_server.csv')
+
+#手动融合后的数据
+train_data = pd.read_csv('./train_data.csv')
+test_data = pd.read_csv('./test_data.csv')
+
+#空值处理
+data = [train_data, test_data]
+for dataset in data:
+    mean = train_data['verify_time'].mean()
+    std = test_data['verify_time'].std()
+    is_null = dataset['verify_time'].isnull().sum()
+    rand_age = np.random.randint(mean - std, mean + std, size=is_null)
+    age_slice = dataset['verify_time'].copy()
+    age_slice[np.isnan(age_slice)] = rand_age
+    dataset['verify_time'] = age_slice
+
+for dataset in data:
+    mean = train_data['server_time'].mean()
+    std = test_data['server_time'].std()
+    is_null = dataset['server_time'].isnull().sum()
+    rand_age = np.random.randint(mean - std, mean + std, size=is_null)
+    age_slice = dataset['server_time'].copy()
+    age_slice[np.isnan(age_slice)] = rand_age
+    dataset['server_time'] = age_slice
+
+#数据压缩
+train_data = reduce_mem_usage(train_data)
+test_data = reduce_mem_usage(test_data)
+
+#训练数据生成
+features = ['pv','verify_time','server_time']
+X_train = train_data.loc[:, features].values
+Y_train = train_data.loc[:, ['label']].values
+X_test = test_data.loc[:, features].values
+
+#随机森林
 random_forest = RandomForestClassifier(criterion="gini",
-                                       min_samples_leaf=5,
-                                       min_samples_split=2,
-                                       n_estimators=400,
-                                       max_features='auto',
+                                       min_samples_leaf=10,
+                                       max_depth = 9,
+                                       min_samples_split=80,
+                                       n_estimators=70,
                                        oob_score=True,
-                                       random_state=1,
+                                       random_state=10,
                                        n_jobs=-1
                                        )
-random_forest.fit(x, Y_train)
+random_forest.fit(X_train, Y_train)
 Y_prediction = random_forest.predict(X_test)
-random_forest.score(x, Y_train)
-# print("oob score:", round(random_forest.oob_score_, 4) * 100, "%")
-#
-# print(Y_prediction)
-# Y_prediction = pd.DataFrame(Y_prediction)
-# result = pd.concat([valid_set['user_id'],Y_prediction],axis=1)
-# result.to_csv('./result.csv')
-# print(result)
+random_forest.score(X_train, Y_train)
+print("oob score:", round(random_forest.oob_score_, 4) * 100, "%")
 
-
-
-data_corr = df.corr()
-plt.subplots(figsize=(9, 9), dpi=100, facecolor='w')
-fig = sns.heatmap(data_corr, annot=True, vmax=1, square=True, cmap="Blues", fmt='.2g')
-fig.set_title('Train_captcha相关性热力图')
-plt.show()
+Y_prediction = pd.DataFrame(Y_prediction)
+result = pd.concat([valid_set['user_id'],Y_prediction],axis=1)
+result.columns = ['user_id','label']
+result.to_csv('./result.csv',index = None)
