@@ -4,25 +4,16 @@ import matplotlib as mlt
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 import seaborn as sns
-from sklearn import linear_model
-from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import Perceptron
-from sklearn.linear_model import SGDClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC, LinearSVC
-from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import GridSearchCV
 
 plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
 
-#数据压缩
+
+# 数据压缩
 def reduce_mem_usage(df, verbose=True):
     numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-    start_mem = df.memory_usage().sum() / 1024**2
+    start_mem = df.memory_usage().sum() / 1024 ** 2
     for col in df.columns:
         col_type = df[col].dtypes
         if col_type in numerics:
@@ -44,12 +35,26 @@ def reduce_mem_usage(df, verbose=True):
                     df[col] = df[col].astype(np.float32)
                 else:
                     df[col] = df[col].astype(np.float64)
-    end_mem = df.memory_usage().sum() / 1024**2
-    if verbose: print('Mem. usage decreased to {:5.2f} Mb ({:.1f}% reduction)'.format(end_mem, 100 * (start_mem - end_mem) / start_mem))
+    end_mem = df.memory_usage().sum() / 1024 ** 2
+    if verbose: print('Mem. usage decreased to {:5.2f} Mb ({:.1f}% reduction)'.format(end_mem, 100 * (
+            start_mem - end_mem) / start_mem))
     return df
 
 
-#数据导入
+# 处理空值
+def process_null(data, a):
+    for dataset in data:
+        mean = train_data[a].mean()
+        std = test_data[a].std()
+        is_null = dataset[a].isnull().sum()
+        rand_age = np.random.randint(mean - std, mean + std, size=is_null)
+        verify_slice = dataset[a].copy()
+        verify_slice[np.isnan(verify_slice)] = rand_age
+        dataset[a] = verify_slice
+    return dataset
+
+
+# 数据导入
 train_path = './data/train/'
 valid_path = './data/validation/'
 
@@ -106,37 +111,12 @@ for data in dataset:
     data['phase'] = data['phase'].map(phases)
     data['result'] = data['result'].map(results)
 
-#相关性热力图绘制
+# 相关性热力图绘制
 # data_corr = train_captcha.corr()
 # plt.subplots(figsize=(9, 9), dpi=100, facecolor='w')
 # fig = sns.heatmap(data_corr, annot=True, vmax=1, square=True, cmap="Blues", fmt='.2g')
 # fig.set_title('Train_captcha相关性热力图')
 # plt.show()
-
-#总平均请求次数
-# train_pv = (train_actions['pv'].groupby(train_actions['user_id']).sum()) / \
-#         (train_actions['pv'].groupby(train_actions['user_id']).count())
-# train_pv.to_csv('./train_pv.csv')
-#
-# test_pv = (valid_actions['pv'].groupby(valid_actions['user_id']).sum()) / \
-#         (valid_actions['pv'].groupby(valid_actions['user_id']).count())
-# test_pv.to_csv('./test_pv.csv')
-#
-# train_verify = (train_captcha['verify_time'].groupby(train_captcha['user_id']).sum()) / \
-#         (train_captcha['verify_time'].groupby(train_captcha['user_id']).count())
-# train_verify.to_csv('./train_verify.csv')
-#
-# test_verify = (valid_captcha['verify_time'].groupby(valid_captcha['user_id']).sum()) / \
-#         (valid_captcha['verify_time'].groupby(valid_captcha['user_id']).count())
-# test_verify.to_csv('./test_verify.csv')
-
-# train_server= ((train_captcha['server_time'].groupby(train_captcha['user_id']).max()) - (train_captcha['server_time'].groupby(train_captcha['user_id']).min()) )/ \
-#         (train_captcha['server_time'].groupby(train_captcha['user_id']).count())
-# train_server.to_csv('./train_server.csv')
-
-# test_server= ((valid_captcha['server_time'].groupby(valid_captcha['user_id']).max()) - (valid_captcha['server_time'].groupby(valid_captcha['user_id']).min()) )/ \
-#         (valid_captcha['server_time'].groupby(valid_captcha['user_id']).count())
-# test_server.to_csv('./test_server.csv')
 
 train_pv = pd.read_csv('./train_pv.csv')
 train_verify = pd.read_csv('./train_verify.csv')
@@ -146,56 +126,53 @@ test_pv = pd.read_csv('./test_pv.csv')
 test_verify = pd.read_csv('./test_verify.csv')
 test_server = pd.read_csv('./test_server.csv')
 
-#手动融合后的数据
+#数据融合
+train_data = pd.merge(train_pv, train_verify, on='user_id', how='left')
+train_data = pd.merge(train_data, train_server, on='user_id', how='left')
+train_data = pd.merge(train_data, train_ground, on='user_id', how='left')
+train_data.to_csv('./train_data.csv', index=False)
+
+test_data = pd.merge(test_pv, test_verify, on='user_id', how='left')
+test_data = pd.merge(test_data, test_server, on='user_id', how='left')
+test_data = pd.merge(test_data, valid_set, on='user_id', how='left')
+test_data.to_csv('./test_data.csv', index=False)
+
+# 融合后的数据
 train_data = pd.read_csv('./train_data.csv')
 test_data = pd.read_csv('./test_data.csv')
 
-#空值处理
+# 空值处理
 data = [train_data, test_data]
-for dataset in data:
-    mean = train_data['verify_time'].mean()
-    std = test_data['verify_time'].std()
-    is_null = dataset['verify_time'].isnull().sum()
-    rand_age = np.random.randint(mean - std, mean + std, size=is_null)
-    age_slice = dataset['verify_time'].copy()
-    age_slice[np.isnan(age_slice)] = rand_age
-    dataset['verify_time'] = age_slice
+process_null(data, 'verify_time')
+process_null(data, 'server_time')
 
-for dataset in data:
-    mean = train_data['server_time'].mean()
-    std = test_data['server_time'].std()
-    is_null = dataset['server_time'].isnull().sum()
-    rand_age = np.random.randint(mean - std, mean + std, size=is_null)
-    age_slice = dataset['server_time'].copy()
-    age_slice[np.isnan(age_slice)] = rand_age
-    dataset['server_time'] = age_slice
-
-#数据压缩
+# 数据压缩
 train_data = reduce_mem_usage(train_data)
 test_data = reduce_mem_usage(test_data)
 
-#训练数据生成
-features = ['pv','verify_time','server_time']
+# 训练数据生成
+features = ['pv', 'verify_time', 'server_time']
 X_train = train_data.loc[:, features].values
 Y_train = train_data.loc[:, ['label']].values
-X_test = test_data.loc[:, features].values
+F_test = test_data.loc[:, features].values
 
-#随机森林
+# 随机森林
 random_forest = RandomForestClassifier(criterion="gini",
                                        min_samples_leaf=10,
-                                       max_depth = 9,
+                                       max_depth=9,
                                        min_samples_split=80,
                                        n_estimators=70,
                                        oob_score=True,
                                        random_state=10,
                                        n_jobs=-1
                                        )
-random_forest.fit(X_train, Y_train)
-Y_prediction = random_forest.predict(X_test)
+random_forest.fit(X_train, Y_train.ravel())
+Y_prediction = random_forest.predict(F_test)
 random_forest.score(X_train, Y_train)
 print("oob score:", round(random_forest.oob_score_, 4) * 100, "%")
 
+#结果输出
 Y_prediction = pd.DataFrame(Y_prediction)
-result = pd.concat([valid_set['user_id'],Y_prediction],axis=1)
-result.columns = ['user_id','label']
-result.to_csv('./result.csv',index = None)
+result = pd.concat([valid_set['user_id'], Y_prediction], axis=1)
+result.columns = ['user_id', 'label']
+result.to_csv('./result.csv', index=None)
