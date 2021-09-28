@@ -11,7 +11,6 @@ from sklearn.preprocessing import StandardScaler
 plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
 
-
 # 数据压缩
 def reduce_mem_usage(df, verbose=True):
     numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
@@ -42,7 +41,6 @@ def reduce_mem_usage(df, verbose=True):
             start_mem - end_mem) / start_mem))
     return df
 
-
 # 处理空值
 def process_null(data, a):
     for dataset in data:
@@ -54,7 +52,6 @@ def process_null(data, a):
         verify_slice[np.isnan(verify_slice)] = rand_age
         dataset[a] = verify_slice
     return dataset
-
 
 # 数据导入
 train_path = './data/train/'
@@ -193,20 +190,27 @@ X_train = train_data.loc[:, features].values
 Y_train = train_data.loc[:, ['label']].values
 F_test = test_data.loc[:, features].values
 
-# 随机森林
-random_forest = RandomForestClassifier(criterion="gini",
-                                       min_samples_leaf=10,
-                                       max_depth=13,
-                                       min_samples_split=80,
-                                       n_estimators=60,
-                                       oob_score=True,
-                                       random_state=10,
-                                       n_jobs=-1
-                                       )
-random_forest.fit(X_train, Y_train.ravel())
-Y_prediction = random_forest.predict(F_test)
-random_forest.score(X_train, Y_train)
-print("oob score:", round(random_forest.oob_score_, 4) * 100, "%")
+# # 随机森林
+# random_forest = RandomForestClassifier(criterion="gini",
+#                                        min_samples_leaf=10,
+#                                        max_depth=13,
+#                                        min_samples_split=80,
+#                                        n_estimators=60,
+#                                        oob_score=True,
+#                                        random_state=10,
+#                                        n_jobs=-1
+#                                        )
+# random_forest.fit(X_train, Y_train.ravel())
+# Y_prediction = random_forest.predict(F_test)
+# random_forest.score(X_train, Y_train)
+# print("oob score:", round(random_forest.oob_score_, 4) * 100, "%")
+
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn import metrics
+gbm = GradientBoostingClassifier(learning_rate=0.01, n_estimators=900,max_depth=13, min_samples_leaf =70,
+            min_samples_split =800,subsample=0.9, random_state=10)
+gbm.fit(X_train,Y_train)
+Y_prediction = gbm.predict(F_test)
 
 # 结果输出
 Y_prediction = pd.DataFrame(Y_prediction)
