@@ -55,5 +55,5 @@
 ## 构建训练集（train_data）
 训练集中相关性热力图如下所示：
 
-![Image text]（https://github.com/pengchen1019/Algo/blob/master/img/Train_data%20corr.png)
+![Image text](https://github.com/pengchen1019/Algo/blob/master/img/train_data%20corr.png)
 
