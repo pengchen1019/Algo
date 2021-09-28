@@ -2,9 +2,11 @@ import pandas as pd
 import numpy as np
 import matplotlib as mlt
 from matplotlib import pyplot as plt
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 import seaborn as sns
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 
 plt.rcParams['font.sans-serif'] = ['SimHei']
 plt.rcParams['axes.unicode_minus'] = False
@@ -97,7 +99,6 @@ validation_set(10797):
 # percent_1 = train_captcha.isnull().sum()/train_captcha.isnull().count()*100
 # percent_2 = (round(percent_1,1)).sort_values(ascending=False)
 # missing_data = pd.concat([total, percent_2],axis = 1, keys=['Total','%'])
-# print(missing_data.head(5))
 
 # 特征形式转换
 '''
@@ -118,23 +119,57 @@ for data in dataset:
 # fig.set_title('Train_captcha相关性热力图')
 # plt.show()
 
-train_pv = pd.read_csv('./train_pv.csv')
+
+pv0 = train_actions.loc[train_actions['offset_hour'] == 0]
+pv0.to_csv('./train_pv0.csv', index=None)
+pv1 = train_actions.loc[train_actions['offset_hour'] == 1]
+pv1.to_csv('./train_pv1.csv', index=None)
+
+testpv0 = valid_actions.loc[valid_actions['offset_hour'] == 0]
+testpv0.to_csv('./test_pv0.csv', index=None)
+testpv1 = valid_actions.loc[valid_actions['offset_hour'] == 1]
+testpv1.to_csv('./test_pv1.csv', index=None)
+
+train_pv0 = pd.read_csv('./train_pv0.csv')
+train_pv1 = pd.read_csv('./train_pv1.csv')
+test_pv0 = pd.read_csv('./test_pv0.csv')
+test_pv1 = pd.read_csv('./test_pv1.csv')
+
+pv1_train = (train_pv1['pv'].groupby(train_pv1['user_id']).sum()) / (
+    train_pv1['pv'].groupby(train_pv1['user_id']).count())
+pv0_train = (train_pv0['pv'].groupby(train_pv0['user_id']).sum()) / (
+    train_pv0['pv'].groupby(train_pv0['user_id']).count())
+pv1_test = (test_pv1['pv'].groupby(test_pv1['user_id']).sum()) / (test_pv1['pv'].groupby(test_pv1['user_id']).count())
+pv0_test = (test_pv0['pv'].groupby(test_pv0['user_id']).sum()) / (test_pv0['pv'].groupby(test_pv0['user_id']).count())
+
+train_pv = pd.merge(pv0_train, pv1_train, on='user_id', how='left')
+train_pv.columns = ['pv0', 'pv1']
+train_pv.to_csv('./train_pv.csv')
+
+test_pv = pd.merge(pv0_test, pv1_test, on='user_id', how='left')
+test_pv.columns = ['pv0', 'pv1']
+test_pv.to_csv('./test_pv.csv')
+
+id = pd.read_csv('./id.csv')
+# train_pv = pd.read_csv('./train_pv.csv')
 train_verify = pd.read_csv('./train_verify.csv')
 train_server = pd.read_csv('./train_server.csv')
+train_pv = pd.read_csv('./train_pv.csv')
 
-test_pv = pd.read_csv('./test_pv.csv')
 test_verify = pd.read_csv('./test_verify.csv')
 test_server = pd.read_csv('./test_server.csv')
+test_pv = pd.read_csv('./test_pv.csv')
 
-#数据融合
-train_data = pd.merge(train_pv, train_verify, on='user_id', how='left')
+# 数据融合
+train_data = pd.merge(id, train_pv, on='user_id', how='left')
+train_data = pd.merge(train_data, train_verify, on='user_id', how='left')
 train_data = pd.merge(train_data, train_server, on='user_id', how='left')
 train_data = pd.merge(train_data, train_ground, on='user_id', how='left')
 train_data.to_csv('./train_data.csv', index=False)
 
-test_data = pd.merge(test_pv, test_verify, on='user_id', how='left')
+test_data = pd.merge(valid_set, test_pv, on='user_id', how='left')
+test_data = pd.merge(test_data, test_verify, on='user_id', how='left')
 test_data = pd.merge(test_data, test_server, on='user_id', how='left')
-test_data = pd.merge(test_data, valid_set, on='user_id', how='left')
 test_data.to_csv('./test_data.csv', index=False)
 
 # 融合后的数据
@@ -145,13 +180,15 @@ test_data = pd.read_csv('./test_data.csv')
 data = [train_data, test_data]
 process_null(data, 'verify_time')
 process_null(data, 'server_time')
+process_null(data, 'pv0')
+process_null(data, 'pv1')
 
 # 数据压缩
 train_data = reduce_mem_usage(train_data)
 test_data = reduce_mem_usage(test_data)
 
 # 训练数据生成
-features = ['pv', 'verify_time', 'server_time']
+features = ['pv0', 'pv1', 'verify_time', 'server_time']
 X_train = train_data.loc[:, features].values
 Y_train = train_data.loc[:, ['label']].values
 F_test = test_data.loc[:, features].values
@@ -159,9 +196,9 @@ F_test = test_data.loc[:, features].values
 # 随机森林
 random_forest = RandomForestClassifier(criterion="gini",
                                        min_samples_leaf=10,
-                                       max_depth=9,
+                                       max_depth=13,
                                        min_samples_split=80,
-                                       n_estimators=70,
+                                       n_estimators=60,
                                        oob_score=True,
                                        random_state=10,
                                        n_jobs=-1
@@ -171,7 +208,7 @@ Y_prediction = random_forest.predict(F_test)
 random_forest.score(X_train, Y_train)
 print("oob score:", round(random_forest.oob_score_, 4) * 100, "%")
 
-#结果输出
+# 结果输出
 Y_prediction = pd.DataFrame(Y_prediction)
 result = pd.concat([valid_set['user_id'], Y_prediction], axis=1)
 result.columns = ['user_id', 'label']
